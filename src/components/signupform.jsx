@@ -46,7 +46,7 @@ const Signup = () => {
                             }
                             )}/>
                             <Input label="password" type="password" placeholder="Enter your password" {...register("password",{required:true})}/>
-                            <button type='submit' className='w-full'>Create Account</button>
+                            <button type='submit' className='w-full font-semibold text-black hover:shadow hover:bg-black hover:text-white hover:rounded-2xl py-2 cursor-pointer'>Create Account</button>
                         </div>
                         
                     </form>
