@@ -26,7 +26,7 @@ function App() {
   }, [dispatch]);
 
   return !loading ? (
-    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-gray-900 via-slate-900 to-black relative overflow-hidden text-gray-100">
+    <div className="min-h-screen flex flex-col justify-between bg-linear-0 via-blue-50 relative overflow-hidden text-gray-100">
       {/* Subtle neon grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(45deg,_rgba(255,255,255,0.08)_1px,_transparent_1px),linear-gradient(-45deg,_rgba(255,255,255,0.08)_1px,_transparent_1px)] [background-size:40px_40px] opacity-30 pointer-events-none"></div>
 
@@ -36,9 +36,11 @@ function App() {
           <Header />
         </header>
 
-        <main className="flex-1 backdrop-blur-lg bg-white/10 shadow-inner border border-white/10 rounded-2xl m-6 p-6">
-          <Outlet />
-        </main>
+       <main className="flex-1 bg-gradient-to-br from-gray-50 via-white to-gray-100 shadow-md border border-gray-100 rounded-2xl mx-4 md:mx-8 lg:mx-16 p-6 md:p-10 lg:p-12 overflow-auto">
+  <Outlet />
+</main>
+
+
 
         <footer className="backdrop-blur-md bg-white/10 border-t border-white/10 shadow-lg">
           <Footer />

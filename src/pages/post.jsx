@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import appwriteService from "../appwrite/config";
-import {Container} from "../components";
-import {Button} from "../components";
+import { Container, Button } from "../components";
 import parse from "html-react-parser";
 
 function Post() {
@@ -11,14 +10,21 @@ function Post() {
   const navigate = useNavigate();
   const userData = useSelector((state) => state.auth.userData);
   const [post, setPost] = useState(null);
+  const [imageUrl, setImageUrl] = useState('');
 
   const isAuthor = post && userData ? post.userId === userData.$id : false;
 
   useEffect(() => {
     if (slug) {
-      appwriteService.getPost(slug).then((res) => {
+      appwriteService.getPost(slug).then(async (res) => {
         if (res) {
           setPost(res);
+
+          // Fetch featured image safely
+          if (res.featuredImage) {
+            const url = await appwriteService.getFilePreview(res.featuredImage);
+            setImageUrl(url);
+          }
         } else {
           navigate("/");
         }
@@ -29,7 +35,9 @@ function Post() {
   const deletePost = () => {
     appwriteService.deletePost(post.$id).then((status) => {
       if (status) {
-        appwriteService.deleteFile(post.featuredImage);
+        if (post.featuredImage) {
+          appwriteService.deleteFile(post.featuredImage);
+        }
         navigate("/");
       }
     });
@@ -45,29 +53,31 @@ function Post() {
     <div className="bg-gray-50 min-h-screen py-10">
       <Container>
         {/* Featured Image */}
-        <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-lg mb-8 relative group">
-          <img
-            src={appwriteService.getFilePreview(post.featuredImage)}
-            alt={post.title}
-            className="w-full h-[400px] object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+        {imageUrl && (
+          <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-lg mb-8 relative group">
+            <img
+              src={imageUrl}
+              alt={post.title}
+              className="w-full h-[400px] object-cover transition-transform duration-500 group-hover:scale-105"
+            />
 
-          {isAuthor && (
-            <div className="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition duration-300">
-              <Link to={`/edit-post/${post.$id}`}>
-                <Button bgColor="bg-green-500 hover:bg-green-600 shadow-md">
-                  ✏️ Edit
+            {isAuthor && (
+              <div className="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition duration-300">
+                <Link to={`/edit-post/${post.$id}`}>
+                  <Button bgColor="bg-green-500 hover:bg-green-600 shadow-md">
+                    ✏️ Edit
+                  </Button>
+                </Link>
+                <Button
+                  bgColor="bg-red-500 hover:bg-red-600 shadow-md"
+                  onClick={deletePost}
+                >
+                  🗑️ Delete
                 </Button>
-              </Link>
-              <Button
-                bgColor="bg-red-500 hover:bg-red-600 shadow-md"
-                onClick={deletePost}
-              >
-                🗑️ Delete
-              </Button>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Post Content */}
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-md p-10">
