@@ -6,60 +6,71 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 const PostForm = ({ post }) => {
-  const { register, handleSubmit, watch, setValue, control } = useForm({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    control,
+  } = useForm({
     defaultValues: {
       title: post?.title || "",
       slug: post?.slug || "",
       content: post?.content || "",
       status: post?.status || "draft",
-      featuredImage: post?.featuredImage || null,
+      image: null, // for file input
     },
   });
 
   const navigate = useNavigate();
-  const userData = useSelector((state) => state.auth.user);
+  const userData = useSelector((state) => state.auth.userData);
+
+  const DEFAULT_PLACEHOLDER_IMAGE = "PLACEHOLDER_FILE_ID"; // replace with actual Appwrite file ID
 
   const submit = async (data) => {
     try {
-      let file;
-
+      // Upload new image if selected
+      let featuredimageId;
       if (data.image?.[0]) {
-        file = await appwriteService.uploadFile(data.image[0]);
+        const file = await appwriteService.uploadFile(data.image[0]);
 
-        if (post?.featuredImage) {
-          await appwriteService.deleteFile(post.featuredImage);
+        // Delete old image if editing
+        if (post?.featuredimage) {
+          await appwriteService.deleteFile(post.featuredimage);
         }
 
-        data.featuredImage = file.$id;
+        featuredimageId = file.$id;
+      } else {
+        // Use existing image or fallback
+        featuredimageId = post?.featuredimage || DEFAULT_PLACEHOLDER_IMAGE;
       }
+
+      // Prepare payload for Appwrite
+      const payload = {
+        title: data.title,
+        slug: data.slug,
+        content: data.content,
+        status: data.status,
+        featuredimage: featuredimageId, // required field
+        userId: userData.$id,
+      };
 
       let dbPost;
       if (post) {
-        dbPost = await appwriteService.updatePost(post.$id, {
-          ...data,
-          featuredImage: data.featuredImage,
-        });
+        dbPost = await appwriteService.updatePost(post.$id, payload);
       } else {
-        dbPost = await appwriteService.createPost({
-          ...data,
-          userId: userData.$id,
-        });
+        dbPost = await appwriteService.createPost(payload);
       }
 
-      if (dbPost) {
-        navigate(`/post/${dbPost.$id}`);
-      }
+      if (dbPost) navigate(`/post/${dbPost.$id}`);
     } catch (err) {
       console.error("❌ Post submission failed:", err);
     }
   };
 
+  // Auto-generate slug
   const slugTransform = useCallback((value) => {
-    if (value && typeof value === "string") {
-      return value.trim().replace(/\s+/g, "-").toLowerCase();
-    } else {
-      return "";
-    }
+    return value ? value.trim().replace(/\s+/g, "-").toLowerCase() : "";
   }, []);
 
   useEffect(() => {
@@ -74,7 +85,7 @@ const PostForm = ({ post }) => {
   return (
     <div className="max-w-3xl mx-auto p-8 bg-gradient-to-r from-purple-50 to-blue-50 shadow-xl rounded-3xl border border-gray-100">
       <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">
-        {post ? "✏️ Edit Your Post" : "📝 Create a New Post"}
+        {post ? "Edit Your Post" : "Create a New Post"}
       </h2>
 
       <form onSubmit={handleSubmit(submit)} className="space-y-6">
@@ -85,7 +96,6 @@ const PostForm = ({ post }) => {
             type="text"
             placeholder="Enter post title"
             {...register("title", { required: true })}
-            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none transition"
           />
         </div>
 
@@ -96,7 +106,6 @@ const PostForm = ({ post }) => {
             type="text"
             placeholder="post-title-slug"
             {...register("slug", { required: true })}
-            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none transition"
           />
         </div>
 
@@ -106,42 +115,37 @@ const PostForm = ({ post }) => {
           <Controller
             name="content"
             control={control}
-            render={({ field }) => (
-              <RTE {...field} placeholder="Write your amazing content..." />
-            )}
+            render={({ field }) => <RTE {...field} />}
           />
         </div>
 
         {/* Status */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-2 text-gray-700">Status</label>
-          <Select
-            {...register("status")}
-            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none transition"
-            options={[
-              { label: "Draft", value: "draft" },
-              { label: "Published", value: "published" },
-            ]}
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                options={[
+                  { label: "Draft", value: "draft" },
+                  { label: "Published", value: "published" },
+                ]}
+              />
+            )}
           />
         </div>
 
         {/* Featured Image */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-2 text-gray-700">Featured Image</label>
-          <Input
-            type="file"
-            accept="image/*"
-            {...register("image")}
-            className="w-full p-3 border border-gray-300 rounded-xl cursor-pointer hover:border-purple-400 transition"
+          <Input type="file" accept="image/*" {...register("image")} />
+          <img
+            src={appwriteService.getFilePreview(post?.featuredimage || DEFAULT_PLACEHOLDER_IMAGE)}
+            alt="Featured Preview"
+            className="mt-4 rounded-2xl shadow-md max-h-60 object-cover border border-gray-200"
           />
-
-          {post?.featuredImage && (
-            <img
-              src={appwriteService.getFilePreview(post.featuredImage)}
-              alt="Featured Preview"
-              className="mt-4 rounded-2xl shadow-md max-h-60 object-cover border border-gray-200"
-            />
-          )}
         </div>
 
         {/* Submit Button */}
@@ -149,7 +153,7 @@ const PostForm = ({ post }) => {
           type="submit"
           className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold rounded-2xl shadow-lg hover:scale-105 transform transition-all"
         >
-          {post ? "💾 Update Post" : "🚀 Create Post"}
+          {post ? "Update Post" : "Create Post"}
         </Button>
       </form>
     </div>
