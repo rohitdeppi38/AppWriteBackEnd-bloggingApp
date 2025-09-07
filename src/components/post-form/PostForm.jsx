@@ -1,17 +1,17 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { Button, Input, Select, RTE } from '../index';
-import appwriteService from '../../appwrite/config';
-import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import React, { useCallback, useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Button, Input, Select, RTE } from "../index";
+import appwriteService from "../../appwrite/config";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const PostForm = ({ post }) => {
   const { register, handleSubmit, watch, setValue, control } = useForm({
     defaultValues: {
-      title: post?.title || '',
-      slug: post?.slug || '',
-      content: post?.content || '',
-      status: post?.status || 'draft',
+      title: post?.title || "",
+      slug: post?.slug || "",
+      content: post?.content || "",
+      status: post?.status || "draft",
       image: null,
     },
   });
@@ -21,61 +21,61 @@ const PostForm = ({ post }) => {
 
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState(post?.featuredImage || null);
+  const [imageUrl, setImageUrl] = useState(null);
 
-  const DEFAULT_PLACEHOLDER_IMAGE = null; // Replace with placeholder ID if needed
+  // ⚡ Replace this with a real file ID from your Appwrite storage
+  const DEFAULT_PLACEHOLDER_IMAGE = "PLACEHOLDER_FILE_ID";
 
-  // Auto-generate slug from title
+  // Slug auto-generator
   const slugTransform = useCallback(
-    (value) => value.trim().replace(/\s+/g, '-').toLowerCase(),
+    (value) => value.trim().replace(/\s+/g, "-").toLowerCase(),
     []
   );
 
-  // Watch title changes to update slug
   useEffect(() => {
     const subscription = watch((value, { name }) => {
-      if (name === 'title') setValue('slug', slugTransform(value.title), { shouldValidate: true });
+      if (name === "title") {
+        setValue("slug", slugTransform(value.title), { shouldValidate: true });
+      }
     });
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe?.();
   }, [watch, slugTransform, setValue]);
 
-  // Fetch image preview from Appwrite
+  // Show image preview
   useEffect(() => {
     const fetchImage = async () => {
-      if (post?.featuredImage) {
+      if (post?.featuredimage) {
         try {
-          const url = await appwriteService.getFilePreview(post.featuredImage);
+          const url = await appwriteService.getFilePreview(post.featuredimage);
           setImageUrl(url);
         } catch (err) {
-          console.error('Error fetching image preview:', err);
-          setImageUrl(DEFAULT_PLACEHOLDER_IMAGE);
+          console.error("Error fetching image preview:", err);
+          setImageUrl(null);
         }
       } else if (preview) {
         setImageUrl(preview);
       } else {
-        setImageUrl(DEFAULT_PLACEHOLDER_IMAGE);
+        setImageUrl(null);
       }
     };
     fetchImage();
-  }, [post?.featuredImage, preview]);
+  }, [post?.featuredimage, preview]);
 
-  // Handle form submission
+  // Submit handler
   const submit = async (data) => {
     try {
       setLoading(true);
-      let fileId;
+      let fileId = post?.featuredimage || DEFAULT_PLACEHOLDER_IMAGE;
 
-      // Upload new image if selected
+      // Upload new file if user selected
       if (data.image?.[0]) {
         const file = await appwriteService.uploadFile(data.image[0]);
         fileId = file.$id;
 
-        // Delete old image if editing
-        if (post?.featuredImage) {
-          await appwriteService.deleteFile(post.featuredImage);
+        // Delete old file if editing
+        if (post?.featuredimage && post.featuredimage !== DEFAULT_PLACEHOLDER_IMAGE) {
+          await appwriteService.deleteFile(post.featuredimage);
         }
-      } else {
-        fileId = post?.featuredImage || DEFAULT_PLACEHOLDER_IMAGE;
       }
 
       const postData = {
@@ -83,12 +83,12 @@ const PostForm = ({ post }) => {
         slug: data.slug || slugTransform(data.title),
         content: data.content,
         status: data.status,
-        userid: userData.$id, // ensure matches backend field
-        featuredImage: fileId,
+        userid: userData?.$id || "",
+        featuredimage: fileId, // ✅ always required
       };
 
       let dbPost;
-      if (post) {
+      if (post && post.$id) {
         dbPost = await appwriteService.updatePost(post.$id, postData);
       } else {
         dbPost = await appwriteService.createPost(postData);
@@ -96,7 +96,7 @@ const PostForm = ({ post }) => {
 
       if (dbPost) navigate(`/post/${dbPost.$id}`);
     } catch (err) {
-      console.error('❌ Post submission failed:', err);
+      console.error("❌ Post submission failed:", err);
     } finally {
       setLoading(false);
     }
@@ -105,20 +105,20 @@ const PostForm = ({ post }) => {
   return (
     <div className="max-w-3xl mx-auto p-8 bg-gradient-to-r from-purple-50 to-blue-50 shadow-xl rounded-3xl border border-gray-100">
       <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">
-        {post ? 'Edit Your Post' : 'Create a New Post'}
+        {post ? "Edit Your Post" : "Create a New Post"}
       </h2>
 
       <form onSubmit={handleSubmit(submit)} className="space-y-6">
         {/* Title */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-2 text-gray-700">Title</label>
-          <Input type="text" placeholder="Enter post title" {...register('title', { required: true })} />
+          <Input type="text" placeholder="Enter post title" {...register("title", { required: true })} />
         </div>
 
         {/* Slug */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-2 text-gray-700">Slug</label>
-          <Input type="text" placeholder="post-title-slug" {...register('slug', { required: true })} />
+          <Input type="text" placeholder="post-title-slug" {...register("slug", { required: true })} />
         </div>
 
         {/* Content */}
@@ -137,8 +137,8 @@ const PostForm = ({ post }) => {
               <Select
                 {...field}
                 options={[
-                  { label: 'Draft', value: 'draft' },
-                  { label: 'Published', value: 'published' },
+                  { label: "Draft", value: "draft" },
+                  { label: "Published", value: "published" },
                 ]}
               />
             )}
@@ -156,13 +156,13 @@ const PostForm = ({ post }) => {
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
-                  field.onChange(e);
-                  if (e.target.files[0]) setPreview(URL.createObjectURL(e.target.files[0]));
+                  const files = e.target.files;
+                  field.onChange(files);
+                  if (files?.[0]) setPreview(URL.createObjectURL(files[0]));
                 }}
               />
             )}
           />
-
           {imageUrl && (
             <img
               src={imageUrl}
@@ -177,10 +177,10 @@ const PostForm = ({ post }) => {
           type="submit"
           disabled={loading}
           className={`w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold rounded-2xl shadow-lg transform transition-all ${
-            loading ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'
+            loading ? "opacity-60 cursor-not-allowed" : "hover:scale-105"
           }`}
         >
-          {loading ? 'Submitting...' : post ? 'Update Post' : 'Create Post'}
+          {loading ? "Submitting..." : post ? "Update Post" : "Create Post"}
         </Button>
       </form>
     </div>

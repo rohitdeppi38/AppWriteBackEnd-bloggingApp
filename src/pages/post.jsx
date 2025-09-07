@@ -10,9 +10,9 @@ function Post() {
   const navigate = useNavigate();
   const userData = useSelector((state) => state.auth.userData);
   const [post, setPost] = useState(null);
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState("");
 
-  const isAuthor = post && userData ? post.userId === userData.$id : false;
+  const isAuthor = post && userData ? post.userid === userData.$id : false;
 
   useEffect(() => {
     if (slug) {
@@ -21,8 +21,8 @@ function Post() {
           setPost(res);
 
           // Fetch featured image safely
-          if (res.featuredImage) {
-            const url = await appwriteService.getFilePreview(res.featuredImage);
+          if (res.featuredimage) {
+            const url = await appwriteService.getFilePreview(res.featuredimage);
             setImageUrl(url);
           }
         } else {
@@ -35,8 +35,8 @@ function Post() {
   const deletePost = () => {
     appwriteService.deletePost(post.$id).then((status) => {
       if (status) {
-        if (post.featuredImage) {
-          appwriteService.deleteFile(post.featuredImage);
+        if (post.featuredimage) {
+          appwriteService.deleteFile(post.featuredimage);
         }
         navigate("/");
       }

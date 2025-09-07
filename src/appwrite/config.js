@@ -33,7 +33,6 @@ class Service {
     }
   }
 
-  // Get all posts, safe for guests
   async getPosts(queries = []) {
     try {
       const res = await this.databases.listDocuments(
@@ -48,12 +47,14 @@ class Service {
     }
   }
 
-  async createPost({ title, slug, content, featuredImage, status }) {
+  async createPost({ title, slug, content, featuredimage, status }) {
     try {
       const user = await this.getCurrentUser();
       if (!user) throw new Error('User not logged in');
 
-      const documentId = slug ? slug.replace(/[^a-zA-Z0-9_-]/g, '_') : ID.unique();
+      const documentId = slug
+        ? slug.replace(/[^a-zA-Z0-9_-]/g, '_')
+        : ID.unique();
 
       return await this.databases.createDocument(
         conf.appwriteDatabaseId,
@@ -64,7 +65,7 @@ class Service {
           content,
           status: status || 'draft',
           userid: user.$id,
-          featuredImage: featuredImage || null,
+          featuredimage: featuredimage || null, // ✅ lowercase
         }
       );
     } catch (error) {
@@ -73,7 +74,7 @@ class Service {
     }
   }
 
-  async updatePost(documentId, { title, content, featuredImage, status }) {
+  async updatePost(documentId, { title, content, featuredimage, status }) {
     try {
       return await this.databases.updateDocument(
         conf.appwriteDatabaseId,
@@ -83,7 +84,7 @@ class Service {
           title,
           content,
           status,
-          featuredImage: featuredImage || null,
+          featuredimage: featuredimage || null, // ✅ lowercase
         }
       );
     } catch (error) {
@@ -109,6 +110,10 @@ class Service {
   // ================= STORAGE =================
 
   async uploadFile(file) {
+    if (!file) {
+      console.error("uploadFile() :: No file provided");
+      return null;
+    }
     try {
       return await this.bucket.createFile(conf.appwriteBucketId, ID.unique(), file);
     } catch (error) {
@@ -145,7 +150,6 @@ class Service {
     try {
       return await this.account.get();
     } catch (error) {
-      // Ignore 401 for guests
       if (error.code !== 401) console.log('Appwrite service :: getCurrentUser() :: ', error);
       return null;
     }
